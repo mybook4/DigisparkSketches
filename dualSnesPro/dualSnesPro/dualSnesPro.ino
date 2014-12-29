@@ -107,6 +107,25 @@ Button 7 => SNES L
 Button 8 => SNES R
 
 
+
+
+SATURN:
+
+My saturn extention cable:
+
+Color   Pin  Signal  DSPin
+blue     1   VCC      VCC  
+green    2   D1        9
+black    3   D0        8
+orange   4   S0        6
+red      5   S1        7
+brown    6
+yellow   7   D3       11
+grey     8   D2       10
+white    9   GND      GND
+
+
+
 */
 
 boolean pinState = false; 
@@ -188,9 +207,6 @@ void loop() {
   delayMicroseconds(12);
   digitalWrite(latchPin, LOW);
   
-  // Initialize the Saturn select lines
-  digitalWrite(satS0,LOW); // initially, S0 is low
-  digitalWrite(satS1,LOW); // initially, S1 is low
 
   // We first read the controller button status into our 16 bit controller registers
   for(int i=0; i<16; i++) {
@@ -221,7 +237,7 @@ void loop() {
     {
       // we already initialized the select lines to 0,0 (S1, S0), so we read and store
       // D0 = Z, D1 = Y, D2 = X, D3 = R
-      pinStateSaturn = digitalRead(satD0);
+      pinStateSaturn = !digitalRead(satD0);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_Z_BUTTON_BIT_MASK;
@@ -231,7 +247,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_Z_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD1);
+      pinStateSaturn = !digitalRead(satD1);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_Y_BUTTON_BIT_MASK;
@@ -241,7 +257,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_Y_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD2);
+      pinStateSaturn = !digitalRead(satD2);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_X_BUTTON_BIT_MASK;
@@ -251,7 +267,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_X_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD3);
+      pinStateSaturn = !digitalRead(satD3);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_R_BUTTON_BIT_MASK;
@@ -269,7 +285,7 @@ void loop() {
     {
       // read button states
       // D0 = B, D1 = C, D2 = A, D3 = Start
-      pinStateSaturn = digitalRead(satD0);
+      pinStateSaturn = !digitalRead(satD0);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_B_BUTTON_BIT_MASK;
@@ -279,7 +295,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_B_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD1);
+      pinStateSaturn = !digitalRead(satD1);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_C_BUTTON_BIT_MASK;
@@ -289,7 +305,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_C_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD2);
+      pinStateSaturn = !digitalRead(satD2);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_A_BUTTON_BIT_MASK;
@@ -299,7 +315,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_A_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD3);
+      pinStateSaturn = !digitalRead(satD3);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_START_BUTTON_BIT_MASK;
@@ -319,7 +335,7 @@ void loop() {
     {
       // read button states
       // D0 = Up, D1 = Down, D2 = Left, D3 = Right
-      pinStateSaturn = digitalRead(satD0);
+      pinStateSaturn = !digitalRead(satD0);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_UP_BUTTON_BIT_MASK;
@@ -329,7 +345,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_UP_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD1);
+      pinStateSaturn = !digitalRead(satD1);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_DOWN_BUTTON_BIT_MASK;
@@ -339,7 +355,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_DOWN_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD2);
+      pinStateSaturn = !digitalRead(satD2);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_LEFT_BUTTON_BIT_MASK;
@@ -349,7 +365,7 @@ void loop() {
         satControllerRegister &= ~(SATURN_LEFT_BUTTON_BIT_MASK);
       }
       
-      pinStateSaturn = digitalRead(satD3);
+      pinStateSaturn = !digitalRead(satD3);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_RIGHT_BUTTON_BIT_MASK;
@@ -367,7 +383,7 @@ void loop() {
     {
       // read button states
       // D0 = don't care, D1 = don't care, D2 = don't care, D3 = L
-      pinStateSaturn = digitalRead(satD3);
+      pinStateSaturn = !digitalRead(satD3);
       if(pinStateSaturn)
       {
         satControllerRegister |= SATURN_L_BUTTON_BIT_MASK;
@@ -378,6 +394,9 @@ void loop() {
       }
       
       // the select lines will be updated to 0,0 (S1, S0) when loop() is run again
+      // Initialize the Saturn select lines
+      digitalWrite(satS0,LOW); // initially, S0 is low
+      digitalWrite(satS1,LOW); // initially, S1 is low
     }
   }
   
@@ -431,7 +450,7 @@ void loop() {
   usbGameControllerRegisterHIGH = (uint8_t)(controller2Register & 0x000F) | (uint8_t)((controller2Register & 0x0F00) >> 4);
   
   // we OR in the Saturn controller bits.  Since the Saturn digital controller has 9 action buttons, one button overflows into the second SNES controller)
-  usbGameControllerRegisterHIGH |= (uint8_t)( (satControllerRegister >> 8) & SATURN_R_BUTTON_BIT_MASK);
+  usbGameControllerRegisterHIGH |= (uint8_t)( (satControllerRegister & SATURN_R_BUTTON_BIT_MASK) >> 8 );
   
   // controller 2 x-axis
   if(controller2Register & 0x0040)
