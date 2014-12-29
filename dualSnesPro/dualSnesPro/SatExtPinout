@@ -1,0 +1,50 @@
+
+
+
+
+Color   Pin  Signal  DSPin
+blue     1   VCC      VCC  
+green    2   D1        9
+black    3   D0        8
+orange   4   S0        6
+red      5   S1        7
+brown    6
+yellow   7   D3       11
+grey     8   D2       10
+white    9   GND      GND
+
+
+
+
+        Clock Cycle     Button Reported   Saturn
+        ===========     ===============   ======
+        1               B                 
+        2               Y
+        3               Select
+        4               Start
+        5               Up on joypad
+        6               Down on joypad
+        7               Left on joypad
+        8               Right on joypad
+        9               A
+        10              X
+        11              L
+        12              R
+
+
+SNES
+0x0000
+0 0 0 0 R L X A Ri Le Dn Up St Se Y B
+
+After SNES shift
+R L X A St Se Y B
+
+Corresponding Sat
+C Z X A St L  Y B
+
+R button on 2nd SNEScontroller
+0x0400 = 0000 0100 0000 0000
+
+Directions
+Ri Le Dn Up 0000 0000 0000
+
