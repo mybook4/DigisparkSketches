@@ -452,21 +452,36 @@ void loop() {
   // we OR in the Saturn controller bits.  Since the Saturn digital controller has 9 action buttons, one button overflows into the second SNES controller)
   usbGameControllerRegisterHIGH |= (uint8_t)( (satControllerRegister & SATURN_R_BUTTON_BIT_MASK) >> 8 );
   
-  // controller 2 x-axis
-  if(controller2Register & 0x0040)
+
+  // stopgap fix for 2nd SNES controller R button not being recognized
+  // we also set the XROT and SLIDER axis based on the button press status
+  if(usbGameControllerRegisterHIGH & 0x80)
   {
-    // left was pressed
-    DigiJoystick.setSLIDER((byte) 0x00);
-  }
-  else if(controller2Register & 0x0080)
-  {
-    // right was pressed 
+    DigiJoystick.setXROT((byte) 0xFF);
     DigiJoystick.setSLIDER((byte) 0xFF);
   }
   else
   {
+    DigiJoystick.setXROT((byte) 0x80);
+    DigiJoystick.setSLIDER((byte) 0x80); 
+  }
+  
+  
+  // controller 2 x-axis
+  if(controller2Register & 0x0040)
+  {
+    // left was pressed
+    DigiJoystick.setYROT((byte) 0x00);
+  }
+  else if(controller2Register & 0x0080)
+  {
+    // right was pressed 
+    DigiJoystick.setYROT((byte) 0xFF);
+  }
+  else
+  {
     // D-Pad is centered in the X direction 
-    DigiJoystick.setSLIDER((byte) 0x80);
+    DigiJoystick.setYROT((byte) 0x80);
   }
   
   // controller 2 y-axis
