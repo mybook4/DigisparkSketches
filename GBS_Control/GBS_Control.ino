@@ -1,10 +1,14 @@
 #include <avr/pgmspace.h>
 #include "TinyWireM.h"
-#include "DigiKeyboard.h"
 #include "StartArray.h"
 #include "ProgramArray240p.h"
 #include "ProgramArray480i.h"
 
+#define DEBUG_PRINT
+
+#ifdef DEBUG_PRINT
+#include "DigiKeyboard.h"
+#endif
 
 #define GBS_I2C_ADDRESS 0x17 // 0x2E
 
@@ -13,9 +17,11 @@ char debugMessage[81];
 
 void printDebugMessage()
 {
+  #ifdef DEBUG_PRINT
   DigiKeyboard.sendKeyStroke(0);
   DigiKeyboard.println(debugMessage);
   DigiKeyboard.delay(100);
+  #endif
 }
 
 
@@ -40,9 +46,6 @@ bool i2cWriteBytes(uint8_t slaveAddress, uint8_t slaveRegister, uint8_t* values,
     -Stop Signal
   */
  
-  //sprintf(debugMessage, "i2cWriteBytes");
-  //printDebugMessage();
- 
   TinyWireM.beginTransmission(slaveAddress);
   
   TinyWireM.send(slaveRegister);
@@ -55,8 +58,11 @@ bool i2cWriteBytes(uint8_t slaveAddress, uint8_t slaveRegister, uint8_t* values,
   byte endRet = TinyWireM.endTransmission();
   if(endRet != 0)
   {
+    #ifdef DEBUG_PRINT
     sprintf(debugMessage, "Error: End Trans ret %d", endRet);
     printDebugMessage();
+    #endif
+    
     return false;
   }
  
@@ -72,16 +78,20 @@ bool i2cWriteBytes(uint8_t slaveRegister, uint8_t* values, int numValues)
 
 bool writeStartArray()
 {
+  #ifdef DEBUG_PRINT
   sprintf(debugMessage, "startArray");
   printDebugMessage();
-
+  #endif
   
   for(int z = 0; z < ((sizeof(startArray)/2) - 1520); z++)
   {    
-    //sprintf(debugMessage, "writing to register %d the value %d", pgm_read_byte(startArray + (z*2)), pgm_read_byte(startArray + (z*2) + 1) );
-    //printDebugMessage();
     i2cWriteOneByte(pgm_read_byte(startArray + (z*2)), pgm_read_byte(startArray + (z*2) + 1));
+    
+    #ifdef DEBUG_PRINT
     DigiKeyboard.delay(10);
+    #else
+    delay(10);
+    #endif
   }
     
   return true;
@@ -91,16 +101,25 @@ bool writeStartArray()
 
 bool writeProgramArray(const uint8_t* programArray)
 {
+  #ifdef DEBUG_PRINT
   sprintf(debugMessage, "programArray");
   printDebugMessage();
+  #endif
   
   for(int y = 0; y < 6; y++)
   {
+    #ifdef DEBUG_PRINT
     sprintf(debugMessage, "Register segment %d", y);
     printDebugMessage();
+    #endif
     
     i2cWriteOneByte(0xF0, (uint8_t)y );
+    
+    #ifdef DEBUG_PRINT
     DigiKeyboard.delay(10);
+    #else
+    delay(10);
+    #endif
  
     for(int z = 0; z < 15; z++)
     {
@@ -111,7 +130,12 @@ bool writeProgramArray(const uint8_t* programArray)
       }
       
       i2cWriteBytes(z*16, bank, 16);
+      
+      #ifdef DEBUG_PRINT
       DigiKeyboard.delay(10);
+      #else
+      delay(10);
+      #endif
     }
     
   }
@@ -121,8 +145,10 @@ bool writeProgramArray(const uint8_t* programArray)
 
 
 void setup() {
+  #ifdef DEBUG_PRINT
   sprintf(debugMessage, "TinyWireM.begin()");
   printDebugMessage();
+  #endif
   
   TinyWireM.begin();
    
@@ -136,8 +162,11 @@ void setup() {
 
 
 void loop() {
+  #ifdef DEBUG_PRINT
   sprintf(debugMessage, "idle in loop");
   printDebugMessage();
-  
   DigiKeyboard.delay(5000);
+  #else
+  delay(5000);
+  #endif
 }
