@@ -1,37 +1,19 @@
 #include <avr/pgmspace.h>
-#include "TinyWireM.h"
+#include "I2CBitBangWriter.h"
 #include "StartArray.h"
 #include "ProgramArray240p.h"
 #include "ProgramArray480i.h"
 
-#define DEBUG_PRINT
-
-#ifdef DEBUG_PRINT
-#include "DigiKeyboard.h"
-#endif
-
 #define GBS_I2C_ADDRESS 0x17 // 0x2E
 
-char debugMessage[81];
 
-
-void printDebugMessage()
+bool writeOneByte(uint8_t slaveRegister, uint8_t value)
 {
-  #ifdef DEBUG_PRINT
-  DigiKeyboard.sendKeyStroke(0);
-  DigiKeyboard.println(debugMessage);
-  DigiKeyboard.delay(100);
-  #endif
+  return writeBytes(slaveRegister, &value, 1); 
 }
 
 
-bool i2cWriteOneByte(uint8_t slaveRegister, uint8_t value)
-{
-  return i2cWriteBytes(slaveRegister, &value, 1); 
-}
-
-
-bool i2cWriteBytes(uint8_t slaveAddress, uint8_t slaveRegister, uint8_t* values, int numValues)
+bool writeBytes(uint8_t slaveAddress, uint8_t slaveRegister, uint8_t* values, uint8_t numValues)
 {
   /*
    Write to Consecutive Control Registers:
@@ -46,23 +28,14 @@ bool i2cWriteBytes(uint8_t slaveAddress, uint8_t slaveRegister, uint8_t* values,
     -Stop Signal
   */
  
-  TinyWireM.beginTransmission(slaveAddress);
+  I2CBitBangWriter.setSlaveAddress(slaveAddress);
   
-  TinyWireM.send(slaveRegister);
+  I2CBitBangWriter.addByteForTransmission(slaveRegister);
   
-  for(int i = 0; i < numValues; i++)
-  {
-    TinyWireM.send(values[i]);
-  }
+  I2CBitBangWriter.addBytesForTransmission(values, numValues);
   
-  byte endRet = TinyWireM.endTransmission();
-  if(endRet != 0)
-  {
-    #ifdef DEBUG_PRINT
-    sprintf(debugMessage, "Error: End Trans ret %d", endRet);
-    printDebugMessage();
-    #endif
-    
+  if(!I2CBitBangWriter.transmitData())
+  {    
     return false;
   }
  
@@ -70,28 +43,18 @@ bool i2cWriteBytes(uint8_t slaveAddress, uint8_t slaveRegister, uint8_t* values,
 }
 
 
-bool i2cWriteBytes(uint8_t slaveRegister, uint8_t* values, int numValues)
+bool writeBytes(uint8_t slaveRegister, uint8_t* values, int numValues)
 {
-  return i2cWriteBytes(GBS_I2C_ADDRESS, slaveRegister, values, numValues);
+  return writeBytes(GBS_I2C_ADDRESS, slaveRegister, values, numValues);
 }
 
 
 bool writeStartArray()
 {
-  #ifdef DEBUG_PRINT
-  sprintf(debugMessage, "startArray");
-  printDebugMessage();
-  #endif
-  
   for(int z = 0; z < ((sizeof(startArray)/2) - 1520); z++)
-  {    
-    i2cWriteOneByte(pgm_read_byte(startArray + (z*2)), pgm_read_byte(startArray + (z*2) + 1));
-    
-    #ifdef DEBUG_PRINT
-    DigiKeyboard.delay(10);
-    #else
+  {
+    writeOneByte(pgm_read_byte(startArray + (z*2)), pgm_read_byte(startArray + (z*2) + 1));
     delay(10);
-    #endif
   }
     
   return true;
@@ -100,26 +63,11 @@ bool writeStartArray()
 
 
 bool writeProgramArray(const uint8_t* programArray)
-{
-  #ifdef DEBUG_PRINT
-  sprintf(debugMessage, "programArray");
-  printDebugMessage();
-  #endif
-  
+{ 
   for(int y = 0; y < 6; y++)
-  {
-    #ifdef DEBUG_PRINT
-    sprintf(debugMessage, "Register segment %d", y);
-    printDebugMessage();
-    #endif
-    
-    i2cWriteOneByte(0xF0, (uint8_t)y );
-    
-    #ifdef DEBUG_PRINT
-    DigiKeyboard.delay(10);
-    #else
+  { 
+    writeOneByte(0xF0, (uint8_t)y );
     delay(10);
-    #endif
  
     for(int z = 0; z < 15; z++)
     {
@@ -129,13 +77,9 @@ bool writeProgramArray(const uint8_t* programArray)
         bank[w] = pgm_read_byte(programArray + (y*256 + z*16 + w));
       }
       
-      i2cWriteBytes(z*16, bank, 16);
+      writeBytes(z*16, bank, 16);
       
-      #ifdef DEBUG_PRINT
-      DigiKeyboard.delay(10);
-      #else
       delay(10);
-      #endif
     }
     
   }
@@ -143,30 +87,100 @@ bool writeProgramArray(const uint8_t* programArray)
   return true;
 }
 
+// Macros for a "Resolution" switch which allows for toggling between
+// 240p (1) and 480i (0)
+//
+// NOTE: The switch schematic below has an RC debouncer connected to it for stability
+//
+// The presence of this switch is optional.  The 50ms delay in the loop could be enough to mask the bounce of your switch.
+// WARNING: Depending on switch/button connection, you may need to enable internal pull up resistors for pins.  This would 
+//
+//                                  
+// Digispark VCC -----/\/\/\/----------| SPDT switch |------------/\/\/\/-----GND
+//                       R1                  |                      R2        |
+//                                           |                                |
+//                                           |----------------------||--------|           
+//                                           |                      C1
+//                                           |
+//                                  Digispark Pro Input
+//                                     GPIO 5 (PA7)
+//
+// R1, R2, and C1 values depend on your switch's debounce time
+
+#define RESOLUTION_SWITCH_DDR  DDRA
+#define RESOLUTION_SWITCH_PIN  PINA
+#define RESOLUTION_SWITCH_PORT PORTA
+#define RESOLUTION_SWITCH_BIT  7
+
+// This variable holds the last known state of the Resolution switch
+// true = 240p, false = 480i
+bool lastKnownResolutionSwitchState = true;
+
+
+// Digispark onboard LED macros
+#define LED_DDR DDRB
+#define LED_PORT PORTB
+#define LED_BIT 1
+
 
 void setup() {
-  #ifdef DEBUG_PRINT
-  sprintf(debugMessage, "TinyWireM.begin()");
-  printDebugMessage();
-  #endif
   
-  TinyWireM.begin();
+  // We setup and read the value of the Resolution switch
+  // to determine if we are initially going 
+  // to write 240p or 480i settings to the scaler chip
+  RESOLUTION_SWITCH_DDR &= ~(1<<RESOLUTION_SWITCH_BIT); // Set the resolution switch to an input
+  RESOLUTION_SWITCH_PORT &= ~(1<<RESOLUTION_SWITCH_BIT); // Turn off internal pullup (we already have resistors in the debounce circuit).  PULL UPs MAY NEED TO BE ENABLED FOR YOUR CIRCUIT
+  bool currentResolutionSwitchState = ((RESOLUTION_SWITCH_PIN & (1<<RESOLUTION_SWITCH_BIT)) != 0); // Read the value of the Resolution switch
+  
+  // NOTE: If a resolution switch isn't wanted, simply comment out the three code lines above and uncomment one the following lines
+  //bool currentResolutionSwitchState = true; // 240p
+  //bool currentResolutionSwitchState = false; // 480i
+  
+  
+  // We setup the LED to tell show switch state
+  LED_DDR |= (1<<LED_BIT);  
+  
+  I2CBitBangWriter.initialize();
    
   // Write the start array
   writeStartArray();
   
-  // Write the 240p register values for now
-  // TODO: Create small UI with available GPIO, buttons, and LEDs to choose between 240p and 480i
-  writeProgramArray(programArray240p);
+  if(currentResolutionSwitchState == true) {
+    // Write the 240p register values to the scaler chip
+    writeProgramArray(programArray240p);
+    LED_PORT |= (1<<LED_BIT); // turn on LED
+  } else {
+    // Write the 480i register values to the scaler chip
+    writeProgramArray(programArray480i);
+    LED_PORT &= ~(1<<LED_BIT); // turn off LED
+  }
+  
+  lastKnownResolutionSwitchState = currentResolutionSwitchState;
 }
 
 
 void loop() {
-  #ifdef DEBUG_PRINT
-  sprintf(debugMessage, "idle in loop");
-  printDebugMessage();
-  DigiKeyboard.delay(5000);
-  #else
-  delay(5000);
-  #endif
+  delay(50); // delay 50 milliseconds
+
+  // Read the state of the Resolution switch
+  bool currentResolutionSwitchState = ((RESOLUTION_SWITCH_PIN & (1<<RESOLUTION_SWITCH_BIT)) != 0);
+  
+  if(currentResolutionSwitchState != lastKnownResolutionSwitchState)
+  {
+    // The switch state has been flipped
+    // Write the appropriate register values to the scaler chip
+    
+    if(currentResolutionSwitchState == true) {
+      // Write the 240p register values to the scaler chip
+      writeProgramArray(programArray240p);
+      LED_PORT |= (1<<LED_BIT); // turn on LED
+    } else {
+      // Write the 480i register values to the scaler chip
+      writeProgramArray(programArray480i);
+      LED_PORT &= ~(1<<LED_BIT); // turn off LE
+    }
+    
+    lastKnownResolutionSwitchState = currentResolutionSwitchState;
+  }
+
 }
