@@ -1,6 +1,4 @@
-
 const uint8_t programArray480i[] PROGMEM = {
-
 143,
 0,
 0,
@@ -776,8 +774,8 @@ const uint8_t programArray480i[] PROGMEM = {
 239,
 227,
 6,
-15,
-8,
+29,
+232,
 129,
 170,
 224,
@@ -791,7 +789,7 @@ const uint8_t programArray480i[] PROGMEM = {
 8,
 122,
 130,
-33,
+41,
 243,
 63,
 2,
@@ -1536,6 +1534,5 @@ const uint8_t programArray480i[] PROGMEM = {
 5,
 5,
 5,
-5,
-
+5
 };

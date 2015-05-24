@@ -7,13 +7,13 @@
   This is (somewhat) based off of the TinyWireM and USI_TWI_Master interface
 */
 
-#ifndef I2CBitBangWriter_h
-#define I2CBitBangWriter_h
+#ifndef I2CBitBanger_h
+#define I2CBitBanger_h
 
 #include <inttypes.h>
 #include <Arduino.h>
 
-#define I2CBB_SEND        0              // indicates sending
+#define I2CBB_RW_BIT_POSITION 0x01
 #define I2CBB_BUF_SIZE    33             // bytes in message buffer (holds a slave address and 32 bytes
 
 #define DDR_I2CBB             DDRB
@@ -25,46 +25,64 @@
 #define I2C_ACK 0
 #define I2C_NACK 1
 
-class I2CBB
-{	
-  public:
-    I2CBB();
-    
-    /*
+
+/*
       Normal interface usage pseudo code is as follows:
-      initialize();
-      setSlaveAddress(<7-bit address>);
-      addByteForTransmission(<byte to send>);
-      if(!transmitData())
+       
+      To Write:
+      
+      I2CBitBanger test(<7-bit address>);
+      test.addByteForTransmission(<byte to send>);
+      if(!test.transmitData())
         failed to send data
       else
         success
+      
+      To Read:
+      
+      uint8_t recevedData[4];
+      I2CBitBanger test(<7-bit address>);
+      int bytesReceived = test.recvData(4, receivedData);
+      if(bytesReceived != 4) {
+        failed to read data
+      }
+      
+      To Change The Slave Address:
+      
+      test.setSlaveAddress(<7-bit address>);
     
-    */
+*/
+
+class I2CBitBanger
+{	
+  public:
+    I2CBitBanger(uint8_t sevenBitAddressArg);
     
-    void initialize();
-    void setSlaveAddress(uint8_t address); // 7-bit address
+    void setSlaveAddress(uint8_t sevenBitAddressArg); // 7-bit address
     
-    // Adds a byte to an internally managed transmission buffer
+    // Adds a byte to an internally managed transmission buffer (preping for a write)
     void addByteForTransmission(uint8_t data);
     
-    // Adds a buffer to an internally managed transmission buffer
+    // Adds a buffer to an internally managed transmission buffer (preping for a write)
     void addBytesForTransmission(uint8_t* buffer, uint8_t bufferSize);
     
-    // Once the 
-    bool transmitData();
+    bool transmitData();  // returns true if transmission was successful (everything ACKed by the slave device)
+    int recvData(int numBytesToRead, uint8_t* outputBuffer);  // returns the number of bytes that were read
+    
 
   private:
     static uint8_t I2CBB_Buffer[];           // holds I2C send data
     static uint8_t I2CBB_BufferIndex;        // current number of bytes in the send buff
 
+    void initializePins();
+    
     bool sendDataOverI2c(uint8_t* buffer, uint8_t bufferSize);
     void sendI2cStartSignal();
     bool sendI2cByte(uint8_t dataByte);
     void sendI2cStopSignal();
+    
+    void receiveI2cByte(bool sendAcknowledge, uint8_t* output);
 };
-
-extern I2CBB I2CBitBangWriter;
 
 #endif
 

@@ -1,0 +1,21 @@
+#define BUTTON_CH_MINUS   0x45 // Backwards 0xa2
+#define BUTTON_CH         0x46 // 0x62
+#define BUTTON_CH_PLUS    0x47 // 0xe2
+#define BUTTON_PREV       0x44 // 0x22
+#define BUTTON_NEXT       0x40 // 0x02
+#define BUTTON_PLAY_PAUSE 0x43 // 0xc2
+#define BUTTON_VOL_MINUS  0x07 // 0xe0
+#define BUTTON_VOL_PLUS   0x15 // 0xa8
+#define BUTTON_EQ         0x09 // 0x90
+#define BUTTON_0          0x16 // 0x68
+#define BUTTON_100_PLUS   0x19 // 0x98
+#define BUTTON_200_PLUS   0x0d // 0xb0
+#define BUTTON_1          0x0c // 0x30
+#define BUTTON_2          0x18 // 0x18
+#define BUTTON_3          0x5e // 0x7a
+#define BUTTON_4          0x08 // 0x10
+#define BUTTON_5          0x1c // 0x38
+#define BUTTON_6          0x5a // 0x5a
+#define BUTTON_7          0x42 // 0x42
+#define BUTTON_8          0x52 // 0x4a
+#define BUTTON_9          0x4a // 0x52
