@@ -250,6 +250,7 @@ void I2CBitBanger::receiveI2cByte(bool sendAcknowledge, uint8_t* output) {
       (*output) = (*output) | mask;
     } else {
       // we received a 0
+      (*output) = (*output) & ~mask;
     }
     mask = mask >> 1;
     
