@@ -1,0 +1,2 @@
+sudo ./avrdude -C ../etc/avrdude.conf -c usbtiny -p m328p -U flash:w:Blink.cpp.hex
+arduinoProMini/arduino-1.6.4/hardware/tools/avr/bin
