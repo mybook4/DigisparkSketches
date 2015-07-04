@@ -91,8 +91,10 @@ void setup() {
     PSX_DDR = 0x00;  // initially set all psx lines to input (this will be changed later)
     PSX_PORT = 0x00; // initially turn off all pullup lines
     PSX_DDR |= (1<<PSX_DAT); // MISO is an output
+    PSX_PORT |= (1<<PSX_DAT); // Set the data line to high to start
   
     // set up SPI values for PSX lines
+    PRR &= ~(1<<PRSPI);//Set to 0 to ensure power to SPI module
     SPCR |= (1<<SPE);   // Enable SPI
     SPCR |= (1<<CPHA);  // CHECK THIS!!!!
     SPCR |= (1<<CPOL);  // CHECK THIS!!!!
@@ -247,7 +249,16 @@ ISR(SPI_STC_vect) {
 
 void loop() {
   // Read the Saturn button states 14ms after the last interrupt
-  if( (millis() - time) > 14) {
+  /*if( (millis() - time) > 14) {
     readSaturnButtonStates();
-  }
+  }*/
+  
+  setPSXButton(PSX_UP, true);
+  delay(1000);
+  setPSXButton(PSX_UP, false);
+  delay(100);
+  setPSXButton(PSX_DOWN, true);
+  delay(1000);
+  setPSXButton(PSX_DOWN, false);
+  delay(1000);
 }
