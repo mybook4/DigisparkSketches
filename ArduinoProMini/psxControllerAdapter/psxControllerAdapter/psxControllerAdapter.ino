@@ -45,8 +45,8 @@ volatile uint8_t buttonByte[2] = {0xFF, 0xFF};
 #define SAT_PIN  PIND
 #define SAT_PORT PORTD
 #define SAT_DDR  DDRD
-#define SAT_S0 PD0 // AVR, not arduino number
-#define SAT_S1 PD1
+#define SAT_S0 PD1 // AVR, not arduino number
+#define SAT_S1 PD0
 #define SAT_D0 PD2
 #define SAT_D1 PD3
 #define SAT_D2 PD4
