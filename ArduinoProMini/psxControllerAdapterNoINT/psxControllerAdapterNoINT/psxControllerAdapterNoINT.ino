@@ -2,11 +2,11 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-//#include <Debug2Wire.h>
+#include <Debug2Wire.h>
 
 #define F_CPU 8000000UL // 8MHZ
 
-//Debug2Wire gpioDebugger(14, 15);
+Debug2Wire gpioDebugger(14,15);
 
 // PSX pin definitions
 #define PSX_PIN  PINB
@@ -41,6 +41,22 @@ volatile uint8_t buttonByte[2] = {0xFF, 0xFF};
 #define PSX_L1       0x0400
 #define PSX_L2       0x0100
 
+/*
+#define PSX_UP       0x0008
+#define PSX_DOWN     0x0002
+#define PSX_LEFT     0x0001
+#define PSX_RIGHT    0x0004
+#define PSX_START    0x0010
+#define PSX_SELECT   0x0080
+#define PSX_X        0x0200
+#define PSX_SQUARE   0x0100
+#define PSX_O        0x0400
+#define PSX_TRIANGLE 0x0800
+#define PSX_R1       0x1000
+#define PSX_R2       0x4000
+#define PSX_L1       0x2000
+#define PSX_L2       0x8000*/
+
 // Saturn pin definitions
 #define SAT_PIN  PIND
 #define SAT_PORT PORTD
@@ -70,19 +86,31 @@ volatile uint8_t buttonByte[2] = {0xFF, 0xFF};
 // PSX protocol macros
 // CMD
 #define PSX_FRAME_START 0x01
+//#define PSX_FRAME_START 0x80
+
 #define PSX_BUTTON_POLL 0x42
+//#define PSX_BUTTON_POLL 0x42
+
 #define PSX_CONFIG 0x43
+//#define PSX_CONFIG 0xC2
+
 #define PSX_CMD_BUTTON_QUERY_IDLE 0x00
+//#define PSX_CMD_BUTTON_QUERY_IDLE 0x00
+
 
 // DAT
 #define PSX_DIGITAL_ID 0x41
+//#define PSX_DIGITAL_ID 0x82
+
 #define PSX_DATA_TO_FOLLOW 0x5A
+//#define PSX_DATA_TO_FOLLOW 0x5A
+
 
 // used to keep track of what byte in buttonByte[] we're going to send
 volatile uint8_t current_byte = 0;
 
-// used to trigger a delayed poll
-volatile bool performDelayedPoll;
+// keeps stores the time when the interrupt routine last finished
+volatile unsigned long time;
 
 enum ProtocolState {
   INIT,
@@ -95,6 +123,9 @@ enum ProtocolState {
 // stores the current state within the PSX protocol
 ProtocolState current_state = INIT;
 
+int numPolls;
+bool pressUp;
+
 void setup() {
     // set up PSX lines
     PSX_DDR = 0x00;  // initially set all psx lines to input (this will be changed later)
@@ -103,7 +134,27 @@ void setup() {
     PSX_DDR |= (1<<PSX_DAT); // MISO is an output
   
     // set up SPI values for PSX lines
-    SPCR = (1<<SPIE) | (1<<SPE) | (1<<DORD) | (1<<CPOL) | (1<<CPHA) | (1<<SPR1);
+    //PRR &= ~(1<<PRSPI); // Set to 0 to ensure power to SPI module
+    //SPCR = 0x6e; //0b01101110;
+    
+    SPCR = (1<<SPE) | (1<<DORD) | (1<<CPOL) | (1<<CPHA) | (1<<SPR1);
+    
+    /*
+    SPCR &= ~(1<<SPIE); // interrupt disabled
+    SPCR |= (1<<DORD);  // Bytes are transmitted LSB first, MSB last
+    SPCR &= ~(1<<MSTR); // we are an SPI slave
+    SPCR |= (1<<CPOL);  
+    SPCR |= (1<<CPHA);  
+    */
+    
+    SPSR = (1<<SPI2X); // SPSR
+    
+    /*
+    SPCR |= (1<<SPR1);
+    SPCR &= ~(1<<SPR0);
+    
+    SPCR |= (1<<SPE);   // Enable SPI
+    */
     
     SPDR = 0xFF;
     
@@ -112,7 +163,12 @@ void setup() {
     SAT_PORT = 0x00; // initially turn off all pullup lines
     SAT_DDR |= (1<<SAT_S0) | (1<<SAT_S1); // set S0 and S1 to output (other lines are already inputs)
     
-    sei();
+    // DEBUG  
+    numPolls = 0;  
+    pressUp = false;
+    // END DEBUG
+    
+    //sei();
 }
 
 
@@ -162,10 +218,15 @@ void readSaturnButtonStates() {
   (SAT_PIN & (1<<SAT_D3))? setPSXButton(SAT_L_MAP, false): setPSXButton(SAT_L_MAP, true);
 }
 
+uint8_t spi_ReceiveByte() {
+  while( !(SPSR & (1<<SPIF)) );
+  return(SPDR); 
+}
+
 void send_ACK() {
   // pull ACK low for 3us, release (or set high instead?)
   
-  _delay_us(5); // emulates 13us due to ancillary instructions (entering the function, etc)
+  _delay_us(7);    
   PSX_DDR |= (1<<PSX_ACK);  // pull ACK low
   
   _delay_us(3);
@@ -178,10 +239,28 @@ void clearAndReturnToInit() {
   current_byte = 0;
 }
 
-ISR(SPI_STC_vect) {
-    
-  uint8_t receivedByte = SPDR;
- 
+
+
+void loop() {
+  // Read the Saturn button states 14ms after the last interrupt
+  /*if( (millis() - time) > 14) {
+    readSaturnButtonStates();
+  }*/
+  /*
+  setPSXButton(PSX_UP, true);
+  _delay_ms(1000);
+  setPSXButton(PSX_UP, false);
+  _delay_ms(100);
+  setPSXButton(PSX_DOWN, true);
+  _delay_ms(1000);
+  setPSXButton(PSX_DOWN, false);
+  _delay_ms(1000);*/
+  
+  
+  
+  uint8_t receivedByte = spi_ReceiveByte(); // wait for a byte
+  //gpioDebugger.debugPrintMSb(receivedByte); 
+  
   switch(current_state) {
     
     case INIT:
@@ -198,13 +277,28 @@ ISR(SPI_STC_vect) {
       break;
 
     case REQ_TYPE:
-    
-      performDelayedPoll = true;
-      
+
       if(receivedByte == PSX_BUTTON_POLL) {
         send_ACK();
         SPDR = PSX_DATA_TO_FOLLOW;
         current_state = SEND_BUTTON_BYTE;
+        
+        // DEBUG
+        ++numPolls;
+ 
+        if(numPolls >= 60) {
+          
+          if(pressUp) {
+            setPSXButton(PSX_DOWN, false);
+            setPSXButton(PSX_UP, true);
+          } else {
+            setPSXButton(PSX_UP, false);
+            setPSXButton(PSX_DOWN, true);
+          }
+          
+          pressUp = !pressUp;  // toggle state
+          numPolls = 0;
+        } // END DEBUG
 
       } else if(receivedByte == PSX_CONFIG) {
         send_ACK();
@@ -238,7 +332,7 @@ ISR(SPI_STC_vect) {
 
       if(receivedByte == 0x00) {
         send_ACK();
-        SPDR = 0x01;
+        SPDR = 0x01; // 0x80;
         current_state = FINISH;
 
       } else {
@@ -251,20 +345,7 @@ ISR(SPI_STC_vect) {
       clearAndReturnToInit();
       break;
   } 
-
-}
-
-
-void loop() {
   
-  // Read the button states
-  if(performDelayedPoll) {
-    
-    _delay_ms(15);
-    readSaturnButtonStates(); // read the Sega Saturn controller button states
-    
-    //gpioDebugger.debugPrintMSb(0x41);
-    
-    performDelayedPoll = false; // reset the flag
-  }
+  //time = millis();
+  
 }
