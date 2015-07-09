@@ -45,7 +45,7 @@ volatile uint8_t buttonByte[2] = {0xFF, 0xFF};
 #define SAT_PIN  PIND
 #define SAT_PORT PORTD
 #define SAT_DDR  DDRD
-#define SAT_S0 PD1 // AVR, not arduino number
+#define SAT_S0 PD1
 #define SAT_S1 PD0
 #define SAT_D0 PD2
 #define SAT_D1 PD3
@@ -66,6 +66,34 @@ volatile uint8_t buttonByte[2] = {0xFF, 0xFF};
 #define SAT_Dn_MAP PSX_DOWN
 #define SAT_Up_MAP PSX_UP
 #define SAT_L_MAP  PSX_SELECT
+
+
+// Genesis pin definitions
+#define GEN_PIN  PIND
+#define GEN_PORT PORTD
+#define GEN_DDR  DDRD
+#define GEN_SEL PD0
+#define GEN_D0 PD2
+#define GEN_D1 PD3
+#define GEN_D2 PD4
+#define GEN_D3 PD5
+#define GEN_D4 PD6
+#define GEN_D5 PD7
+
+// mapping between saturn buttons and PSX button bit positions
+#define GEN_MODE_MAP PSX_L2
+#define GEN_X_MAP  PSX_L1
+#define GEN_Y_MAP  PSX_TRIANGLE
+#define GEN_Z_MAP  PSX_R1
+#define GEN_St_MAP PSX_START
+#define GEN_A_MAP  PSX_SQUARE
+#define GEN_C_MAP  PSX_O
+#define GEN_B_MAP  PSX_X
+#define GEN_Rt_MAP PSX_RIGHT
+#define GEN_Lt_MAP PSX_LEFT
+#define GEN_Dn_MAP PSX_DOWN
+#define GEN_Up_MAP PSX_UP
+
 
 // PSX protocol macros
 // CMD
@@ -108,10 +136,17 @@ void setup() {
     SPDR = 0xFF;
     
     // set up Saturn controller lines
+    /*
     SAT_DDR = 0x00;  // initially set all saturn lines to input (this will be changed later)
     SAT_PORT = 0x00; // initially turn off all pullup lines
     SAT_DDR |= (1<<SAT_S0) | (1<<SAT_S1); // set S0 and S1 to output (other lines are already inputs)
-    
+    */
+
+    // set up Genesis controller lines
+    GEN_DDR = 0x00;  // initially set all saturn lines to input (this will be changed later
+    GEN_PORT = 0x00; // initially turn off all pullup ines
+    GEN_DDR |= (1<<GEN_SEL);
+
     sei();
 }
 
@@ -161,6 +196,32 @@ void readSaturnButtonStates() {
   _delay_us(10);
   (SAT_PIN & (1<<SAT_D3))? setPSXButton(SAT_L_MAP, false): setPSXButton(SAT_L_MAP, true);
 }
+
+
+
+void readGenesisButtonStates() {
+  // Note, currently 6 button controllers aren't yet supported
+  // If needed, support can be added by clocking SEL 5 times (high to low) 
+  //   and looking at the 3rd and 4th lows (6 button controllers have lo lo lo lo, then hi hi hi hi)
+
+  // set the buttonByte array with Genesis button states
+
+  // set SEL to 0, delay (to give controller time to settle), and read/store D0-D5
+  GEN_PORT &= ~(1<<GEN_SEL);
+  _delay_us(10);
+  (GEN_PIN & (1<<GEN_D0))? setPSXButton(GEN_Up_MAP, false): setPSXButton(GEN_Up_MAP, true);
+  (GEN_PIN & (1<<GEN_D1))? setPSXButton(GEN_Dn_MAP, false): setPSXButton(GEN_Dn_MAP, true);
+  (GEN_PIN & (1<<GEN_D4))? setPSXButton(GEN_A_MAP, false): setPSXButton(GEN_A_MAP, true);
+  (GEN_PIN & (1<<GEN_D5))? setPSXButton(GEN_St_MAP, false): setPSXButton(GEN_St_MAP, true);
+
+  GEN_PORT |= (1<<GEN_SEL);
+  _delay_us(10);
+  (GEN_PIN & (1<<GEN_D2))? setPSXButton(GEN_Lt_MAP, false): setPSXButton(GEN_Lt_MAP, true);
+  (GEN_PIN & (1<<GEN_D3))? setPSXButton(GEN_Rt_MAP, false): setPSXButton(GEN_Rt_MAP, true);
+  (GEN_PIN & (1<<GEN_D4))? setPSXButton(GEN_B_MAP, false): setPSXButton(GEN_B_MAP, true);
+  (GEN_PIN & (1<<GEN_D5))? setPSXButton(GEN_C_MAP, false): setPSXButton(GEN_C_MAP, true);
+}
+
 
 void send_ACK() {
   // pull ACK low for 3us, release (or set high instead?)
@@ -261,7 +322,8 @@ void loop() {
   if(performDelayedPoll) {
     
     _delay_ms(15);
-    readSaturnButtonStates(); // read the Sega Saturn controller button states
+    //readSaturnButtonStates(); // read the Sega Saturn controller button states
+    readGenesisButtonStates(); // read the Sega Genesis controller button states
     
     //gpioDebugger.debugPrintMSb(0x41);
     
