@@ -213,6 +213,9 @@ void readGenesisButtonStates() {
   (GEN_PIN & (1<<GEN_D1))? setPSXButton(GEN_Dn_MAP, false): setPSXButton(GEN_Dn_MAP, true);
   (GEN_PIN & (1<<GEN_D4))? setPSXButton(GEN_A_MAP, false): setPSXButton(GEN_A_MAP, true);
   (GEN_PIN & (1<<GEN_D5))? setPSXButton(GEN_St_MAP, false): setPSXButton(GEN_St_MAP, true);
+  
+  // Holding Start and A buttons simulates pressing the PSX Select Button
+  ( ((GEN_PIN & (1<<GEN_D4)) == 0) && ((GEN_PIN & (1<<GEN_D5)) == 0) )? setPSXButton(PSX_SELECT, true): setPSXButton(PSX_SELECT, false);
 
   GEN_PORT |= (1<<GEN_SEL);
   _delay_us(10);
