@@ -13,12 +13,15 @@
 #define SNESController_h
 
 #include <inttypes.h>
+
+/*
 #if defined(ARDUINO) && ARDUINO >= 100
   #include "Arduino.h"
 #else
   #include "WProgram.h"
   #include <pins_arduino.h>
 #endif
+*/
 
 #define SNES_B       0x01
 #define SNES_Y       0x02

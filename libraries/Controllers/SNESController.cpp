@@ -10,11 +10,13 @@
 */
 
 #include "SNESController.h"
+
 #if defined(ARDUINO) && ARDUINO >= 100
   #include "Arduino.h"
 #else
   #include "WProgram.h"
 #endif
+
 
 #define DELAY 2
 
@@ -35,11 +37,13 @@ void SNESController::init(int strobePin, int clockPin, int dataPin) {
   pinMode(strobePin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, INPUT);
+
 }
 
 unsigned int SNESController::getState(void)
 {
   unsigned int state = 0;
+
 
   // pulse the strobe pin
   digitalWrite(strobePin,HIGH);
@@ -55,6 +59,8 @@ unsigned int SNESController::getState(void)
     delayMicroseconds(DELAY);
     digitalWrite(clockPin,LOW);
   }
+
   return ~state;
 }
+
 
