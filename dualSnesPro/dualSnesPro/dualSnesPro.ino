@@ -148,12 +148,38 @@ int satD2 = 10; // Digispark Pro pin number for the Saturn digital controller's 
 int satD3 = 11; // Digispark Pro pin number for the Saturn digital controller's Data 3 pin
 uint16_t satControllerRegister = 0x0000; // 16 bit number to hold the 9 button values and 4 directions of the Saturn digital controller
 
+/*
 #define SATURN_A_BUTTON_BIT_MASK     0x0010
 #define SATURN_B_BUTTON_BIT_MASK     0x0001
 #define SATURN_C_BUTTON_BIT_MASK     0x0080
 #define SATURN_X_BUTTON_BIT_MASK     0x0020
 #define SATURN_Y_BUTTON_BIT_MASK     0x0002
 #define SATURN_Z_BUTTON_BIT_MASK     0x0040
+#define SATURN_L_BUTTON_BIT_MASK     0x0004
+#define SATURN_R_BUTTON_BIT_MASK     0x0400
+#define SATURN_START_BUTTON_BIT_MASK 0x0008
+#define SATURN_UP_BUTTON_BIT_MASK    0x1000
+#define SATURN_DOWN_BUTTON_BIT_MASK  0x2000
+#define SATURN_LEFT_BUTTON_BIT_MASK  0x4000
+#define SATURN_RIGHT_BUTTON_BIT_MASK 0x8000
+OLD MASKS
+
+After SNES shift
+R L X A St Se Y B
+
+Corresponding Sat
+C Z X A St L  Y B
+
+Corresponding Sat (updated 8/21/16)
+Z X Y C St L  A B
+*/
+
+#define SATURN_A_BUTTON_BIT_MASK     0x0002
+#define SATURN_B_BUTTON_BIT_MASK     0x0001
+#define SATURN_C_BUTTON_BIT_MASK     0x0010
+#define SATURN_X_BUTTON_BIT_MASK     0x0040
+#define SATURN_Y_BUTTON_BIT_MASK     0x0020
+#define SATURN_Z_BUTTON_BIT_MASK     0x0080
 #define SATURN_L_BUTTON_BIT_MASK     0x0004
 #define SATURN_R_BUTTON_BIT_MASK     0x0400
 #define SATURN_START_BUTTON_BIT_MASK 0x0008
