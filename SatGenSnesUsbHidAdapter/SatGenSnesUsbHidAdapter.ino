@@ -315,8 +315,30 @@ SNES)
 
 When connected to a PC, the controller adapter will show up as one 6 axis, 16 button controller.
 
-BUTTON MAPPING BETWEEN CONTROLLER TYPES
+The button mapping is as follows:
 
+USB HID     SNES     Saturn    Genesis
+----------------------------------------------------------------------
+-x          Left     Left      Left  (Y when A+B+C pressed)
++x          Right    Right     Right (A when A+B+C pressed)
+-y          Down     Down      Down  (B when A+B+C pressed)
++y          Up       Up        Up    (X when A+B+C pressed)
+Button 0    B        B         B
+Button 1    Y        A         A
+Button 2    Select   L         A+B+C (disables directions and A,B,C)
+Button 3    Start    Start     Start
+Button 4    A        C         C
+Button 5    X        Y         
+Button 6    L        X         
+Button 7    R        Z         
+Button 8
+Button 9
+Button 10            R
+Button 11
+Button 12
+Button 13
+Button 14
+Button 15
 
 
 */
@@ -488,6 +510,8 @@ void setup() {
   satControllerRegister  = 0x0000;
   genControllerRegister  = 0x0000;
 
+  delayMicroseconds(10); // allow pins to settle
+
   // USB Joystick setup
   // All axis are set to the neutral position
   DigiJoystick.setX((byte) 0x80);
@@ -497,7 +521,7 @@ void setup() {
   DigiJoystick.setZROT((byte) 0x80);
   DigiJoystick.setSLIDER((byte) 0x80);
 
-  delayMicroseconds(10); // allow pins to settle
+  DigiJoystick.delay(15); // milliseconds
 }
 
 
@@ -613,10 +637,6 @@ void loop() {
 
     //delayMicroseconds(10); 
   }
-
-
-  
-
 
 
   // Buttons
