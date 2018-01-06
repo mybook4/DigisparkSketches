@@ -1,0 +1,8 @@
+When arduino (with Digistump board package installed) flashes code to the Digispark, it uses micronucleus:
+
+/<user>/.arduino15/packages/digistump/tools/micronucleus/2.0a4/launcher -cdigispark --timeout 60 -Uflash:w:/tmp/arduino_build_xxxxxx/Blink.ino.hex:i
+
+
+To flash littlewire, we'd need to run the same command, but with the littlewire_v13.hex file (version 1.3)
+
+/<user>/.arduino15/packages/digistump/tools/micronucleus/2.0a4/launcher -cdigispark --timeout 60 -Uflash:w:./littlewire_v13.hex:i
