@@ -1,29 +1,29 @@
 /////////////////////////////////////////////////////////////////////////////////////
-// The Ridiculously Inexpensive Lag Tester (RILT) - Arduino Nano edition
+// The Ridiculously Inexpensive Lag Tester (RILT) - Arduino Pro Mini 3.3v edition
 //
-// Note:  This is the 240p/480p Y (luma) version (Y of YPbPbr) for the Nano.
-// The Arduino Nano (16Mhz) is used (which has an ATMega328p).
+// Note:  This is the 240p/480p Y (luma) version (Y of YPbPbr) for the Pro Mini.
+// The Arduino Pro Mini (8Mhz) is used (which has an ATMega328p).
 //
 // Port B is used.
 //
-// PB0 - Negative Sync Active (0v), Negative Sync Inactive (5v)
-// PB1 - Black (0v), White (5v)
+// PB0 - Negative Sync Active (0v), Negative Sync Inactive (3.3v)
+// PB1 - Black (0v), White (3.3v)
 //       PB0 and PB1 are used to generate the Y signal, which has built-in sync
 // 
 //       Sync
 //       PB0-----/\/\/\/------|
-//               1000 Ohm     |
+//               560 Ohm      |
 //       B/W                  |
 //       PB1-----/\/\/\/------*-----Output To Display (Vo)... ---/\/\/\/---GND
-//               470 Ohm                                         75 Ohm (term)
+//               270 Ohm                                         75 Ohm (term)
 //                      
 //
 //       PB1 | PB0 | ~Vo (terminated)
 //       --------------------------
 //       0v  |  0v | 0v (in sync pulse)
-//       0v  |  5v | 0.304v (Black)
-//       5v  |  0v | 0.646v (Grey)
-//       5v  |  5v | 0.950v (White)
+//       0v  |3.3v | 0.313v (Black)
+//     3.3v  |  0v | 0.649v (Grey)
+//     3.3v  |3.3v | 0.962v (White)
 //
 //       Vo (terminated) = ((Vpb1/Rpb1) + (Vpb0/Rpb0)) / ((1/75)+(1/Rpb0)+(1/Rpb10)
 // 
@@ -52,7 +52,7 @@
 // 
 // 
 // Concept: The goal was to create an inexpensive analog display lag testing device.
-//          The design consists of a small microcontroller board (Arduino Nano),
+//          The design consists of a small microcontroller board (Arduino Pro Mini),
 //          a relatively fast photodiode (for display light detection), 
 //          a couple of resistors, a common transistor, and a single RCA connector 
 //          for analog video output.
@@ -61,8 +61,6 @@
 //          
 //
 /////////////////////////////////////////////////////////////////////////////////////
-
-#include<avr/sleep.h>
 
 #define RILT_PORT PORTB
 #define RILT_PIN  PINB
@@ -84,8 +82,8 @@
 
 #define RESULT_WAIT_IN_LINES 62492
 
-#define OCR1A_VALUE_FOR_240P 1016 // 16,000,000 / (1015+1) = 15,748 Hz
-#define OCR1A_VALUE_FOR_480P 508  // 16,000,000 / (507+1) = 31496 Hz
+#define OCR1A_VALUE_FOR_240P 507  // 8,000,000 / (507+1) = 15,748 Hz
+#define OCR1A_VALUE_FOR_480P 253  // 8,000,000 / (253+1) = 31,496 Hz
 
 uint8_t vidMode;
 
@@ -119,7 +117,7 @@ void setup() {
   // Initialize Serial and send a welcome message
   Serial.begin(9600);
   Serial.println("Welcome to RILT:  The Ridiculously Inexpensive Lag Tester");
-
+  Serial.println("                  (3.3v Arduino Pro Mini Edition)");
 
   // Initialize Timer1
   cli(); // stop interrupts
@@ -158,8 +156,6 @@ void setup() {
   resultLinesWaited = 0;
   printSerialFlag = false;
 
-  set_sleep_mode(SLEEP_MODE_IDLE);
-
   sei();
 }
 
@@ -174,7 +170,7 @@ void generate240p() {
   RILT_PORT |= (1<<SYNC_PORT_PIN);
 
   // We're in the Front Porch region
-  // for 1.5us (approx 24 clock ticks at 16Mhz)
+  // for 1.5us (approx 12 clock ticks at 8Mhz)
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
@@ -182,22 +178,9 @@ void generate240p() {
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 10th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 20th clock
-  __asm__ __volatile__ ("nop\n\t"); // 21st clock (overhead)
+  __asm__ __volatile__ ("nop\n\t"); // 8 clocks (overhead) 
 
-  // We enter the sync pulse for 4.7us (approximately 75 clock ticks at 16Mhz)
+  // We enter the sync pulse for 4.7us (approximately 38 clock ticks at 8Mhz)
   // Set to sync active
   RILT_PORT &= ~(1<<SYNC_PORT_PIN);
   __asm__ __volatile__ ("nop\n\t");
@@ -225,50 +208,12 @@ void generate240p() {
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 30th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 40th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 50th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 60th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 64th clock (overhead)
+  __asm__ __volatile__ ("nop\n\t"); // 26th clock (overhead)
 
 
   // If we're in the VSync region (i.e. on line 4, 5, or 6 (3 FP, 3 SP, 16 BP) for 240p,
   // then keep sync LOW (the back porch is 0 during VSync)
-  // The Back Porch is 1.5us, or approximately 24 clock ticks at 16Mhz.
+  // The Back Porch is 1.5us, or approximately 12 clock ticks at 8Mhz.
 
   // Note: The if() is structured this way to descrease jitter for 
   // when we're not in the VSync region.  The idea is that all parts
@@ -295,16 +240,8 @@ void generate240p() {
     // then draw the line white
     if( (horizontalLineCount > BOX_START_LINE_240P) && (horizontalLineCount < BOX_END_LINE_240P) ) {
 
-      // Waiting for back porch to complete (approximately 25 clocks minus overhead)
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t"); // 10th clock
+      // Waiting for back porch to complete (approximately 12 clocks minus overhead)
+      __asm__ __volatile__ ("nop\n\t"); // 1 clock (overhead)
 
       if(drawBox) {
         // set Vid to high (i.e. start drawing a white line of the box)
@@ -314,9 +251,9 @@ void generate240p() {
         // The visible line time for 240p is 
         // 63.55us -1.5us(FP) -4.7us(Sync) -1.5us(BP) = 55.85us.
         // 0.25 * 55.85us = 13.96us
-        // 13.96us / 0.0625 = 223 cycles
+        // 13.96us / 0.125 = 112 cycles
         // Doesn't have to be exact, just enough to make a visible white box.
-        uint8_t waitCounter = 21;
+        uint8_t waitCounter = 10;
         while(waitCounter) {
           __asm__ __volatile__ ("nop\n\t");
           __asm__ __volatile__ ("nop\n\t");
@@ -346,18 +283,8 @@ void generate240p() {
       __asm__ __volatile__ ("nop\n\t");
       __asm__ __volatile__ ("nop\n\t"); // 10th clock
 
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t"); // 20th clock
-
       // set Vid to high (i.e. start drawing a white line of the box)
-        RILT_PORT |= (1<<VID_PORT_PIN);
+      RILT_PORT |= (1<<VID_PORT_PIN);
     }
     
   } else {
@@ -448,16 +375,10 @@ void generate480p() {
   RILT_PORT |= (1<<SYNC_PORT_PIN);
 
   // We're in the Front Porch region
-  // for 0.6355us (approx 10 clock ticks at 16Mhz)
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 7th clock (overhead)
+  // for 0.6355us (approx 5 clock ticks at 8Mhz)
+  //__asm__ __volatile__ ("nop\n\t"); // 1st clock (overhead)
 
-  // We enter the sync pulse for 3.8133us (approximately 61 clock ticks at 16Mhz)
+  // We enter the sync pulse for 3.8133us (approximately 31 clock ticks at 8Mhz)
   // Set to sync active
   RILT_PORT &= ~(1<<SYNC_PORT_PIN);
   __asm__ __volatile__ ("nop\n\t");
@@ -477,44 +398,12 @@ void generate480p() {
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 20th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 30th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 40th clock
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 50th clock (overhead)
+  __asm__ __volatile__ ("nop\n\t"); // 18th clock (overhead)
 
 
   // If we're in the VSync region (i.e. on line 11, 12, or 13 (10 FP, 3 SP, 32 BP) for 480p,
   // then keep sync LOW (the back porch is 0 during VSync)
-  // The Back Porch is 1.9066us, or approximately 31 clock ticks at 16Mhz.
+  // The Back Porch is 1.9066us, or approximately 15 clock ticks at 8Mhz.
 
   // Note: The if() is structured this way to descrease jitter for 
   // when we're not in the VSync region.  The idea is that all parts
@@ -541,18 +430,8 @@ void generate480p() {
     // then draw the line white
     if( (horizontalLineCount > BOX_START_LINE_480P) && (horizontalLineCount < BOX_END_LINE_480P) ) {
 
-      // Waiting for back porch to complete (approximately 31 clocks minus overhead)
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t"); // 10th clock
-
-      __asm__ __volatile__ ("nop\n\t"); // 11th clock
+      // Waiting for back porch to complete (approximately 15 clocks minus overhead)
+      //__asm__ __volatile__ ("nop\n\t"); // 1 clock (overhead)
 
       if(drawBox) {
         // set Vid to high (i.e. start drawing a white line of the box)
@@ -562,9 +441,9 @@ void generate480p() {
         // The visible line time for 480p is 
         // 31.77us -0.6355us(FP) -3.8133us(Sync) -1.9066us(BP) = 25.42us.
         // 0.25 * 25.42us = 6.355us
-        // 6.355us / 0.0625 = 101 cycles
+        // 6.355us / 0.125 = 50 cycles
         // Doesn't have to be exact, just enough to make a visible white box.
-        uint8_t waitCounter = 9;
+        uint8_t waitCounter = 5;
         while(waitCounter) {
           __asm__ __volatile__ ("nop\n\t");
           __asm__ __volatile__ ("nop\n\t");
@@ -583,26 +462,8 @@ void generate480p() {
       
     } else if(horizontalLineCount == 75) {
       // draw a pilot line
-      // Waiting for back porch to complete (approximately 25 clocks minus overhead)
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t"); // 10th clock
-
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t"); // 20th clock
+      // Waiting for back porch to complete (approximately 12 clocks minus overhead)
+      //__asm__ __volatile__ ("nop\n\t"); // 10th clock
 
       // set Vid to high (i.e. start drawing a white line of the box)
         RILT_PORT |= (1<<VID_PORT_PIN);
