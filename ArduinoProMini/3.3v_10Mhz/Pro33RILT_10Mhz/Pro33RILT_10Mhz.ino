@@ -87,7 +87,7 @@
 #define RESULT_WAIT_IN_LINES 62492
 
 #define OCR1A_VALUE_FOR_240P 634  // 10,000,000 / (634+1) = 15,748 Hz
-#define OCR1A_VALUE_FOR_480P 317  // 10,000,000 / (317+1) = 31,447 Hz
+#define OCR1A_VALUE_FOR_480P 318  // 10,000,000 / (317+1) = 31,447 Hz
 
 uint8_t vidMode;
 
@@ -400,7 +400,8 @@ void generate480p() {
   RILT_PORT |= (1<<SYNC_PORT_PIN);
 
   // We're in the Front Porch region
-  // for 2.2us (approx 22 clock ticks at 10Mhz)
+  // for 0.5925us, however, we need to maintain good VSync pulse timing
+  // so we choose 2.33us (approx 23 clock ticks at 10Mhz)
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t");
@@ -417,9 +418,11 @@ void generate480p() {
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t"); 
   __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 19th clock (overhead)
+  __asm__ __volatile__ ("nop\n\t"); 
+  __asm__ __volatile__ ("nop\n\t");
+  __asm__ __volatile__ ("nop\n\t"); // 20th clock (overhead)
 
-  // We enter the sync pulse for 2.8us (approximately 28 clock ticks at 10Mhz)
+  // We enter the sync pulse for 2.33us (approximately 24 clock ticks at 10Mhz)
   // Set to sync active
   RILT_PORT &= ~(1<<SYNC_PORT_PIN);
   __asm__ __volatile__ ("nop\n\t");
@@ -433,25 +436,24 @@ void generate480p() {
   __asm__ __volatile__ ("nop\n\t");
   __asm__ __volatile__ ("nop\n\t"); // 10th clock
   __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t");
-  __asm__ __volatile__ ("nop\n\t"); // 16th clock (overhead)
+  __asm__ __volatile__ ("nop\n\t"); // 12th clock (overhead)
 
 
-  // If we're in the VSync region (i.e. on line 11, 12, or 13 (10 FP, 3 SP, 32 BP) for 480p,
+  // If we're in the VSync region (i.e. on line 7, 8, 9, 10, 11, or 12, (6 FP, 6 SP, 32 BP) for 480p,
   // then keep sync LOW (the back porch is 0 during VSync)
-  // The Back Porch is 2.2us, or approximately 22 clock ticks at 10Mhz.
+  // The Back Porch is 2.1886us, or approximately 22 clock ticks at 10Mhz.
 
   // Note: The if() is structured this way to descrease jitter for 
   // when we're not in the VSync region.  The idea is that all parts
   // of the AND would need to be evaluated to true.  This might need to be 
   // replaced with assembly to prevent compiler optimizations from getting in
   // our way of our goal to reduce jitter.
-  
-  if( (horizontalLineCount != 11) && (horizontalLineCount != 12) && (horizontalLineCount != 13) ) {
+
+  if( (horizontalLineCount > 6) && (horizontalLineCount < 13) ) {
+    // We're in the VSync region.
+    // Keep sync line LOW.
     
+  } else {
     // We're not in the VSync region
     
     // Set to sync inactive / black
@@ -508,7 +510,7 @@ void generate480p() {
       
     } else if(horizontalLineCount == 75) {
       // draw a pilot line
-      // Waiting for back porch to complete (approximately 27 clocks minus overhead)
+      // Waiting for back porch to complete (approximately 22 clocks minus overhead)
       __asm__ __volatile__ ("nop\n\t");
       __asm__ __volatile__ ("nop\n\t");
       __asm__ __volatile__ ("nop\n\t");
@@ -529,16 +531,10 @@ void generate480p() {
       __asm__ __volatile__ ("nop\n\t");
       __asm__ __volatile__ ("nop\n\t");
       __asm__ __volatile__ ("nop\n\t"); // 20th clock
-      __asm__ __volatile__ ("nop\n\t");
-      __asm__ __volatile__ ("nop\n\t"); // 22nd clock
 
       // set Vid to high (i.e. start drawing a white line of the box)
-        RILT_PORT |= (1<<VID_PORT_PIN);
+      RILT_PORT |= (1<<VID_PORT_PIN);
     }
-    
-  } else {
-    // We're in the VSync region.
-    // Keep sync line LOW.
     
   }
 
