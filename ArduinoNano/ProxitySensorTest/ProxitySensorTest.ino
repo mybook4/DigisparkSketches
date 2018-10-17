@@ -1,49 +1,45 @@
 
-int trigPin = 11;    //Trig - green Jumper
-int echoPin = 12;    //Echo - yellow Jumper
+// Globals (for convenience)
+int trigPin = 11;    // Proximity sensor - Trig line
+int echoPin = 12;    // Proximity sensor - Echo line
 
+int pinFeather0 = 2;  // D2 ----/\/\/\/----|>|----Gnd.  All resistors 510 ohms.
+int pinFeather1 = 3;  // D3 ----/\/\/\/----|>|----Gnd
+int pinFeather2 = 4;  // D4 ----/\/\/\/----|>|----Gnd
+int pinFeather3 = 5;  // D5 ----/\/\/\/----|>|----Gnd
 
-//int onboardLEDPin = 13; // D13 onboard Arduino Nano LED
-//int offboardLEDPin = 3; // Offboard LED - D3 --/\/\/\----|>|----Gnd
-                        //                     470 ohm
-
-int pinFeather0 = 2;
-int pinFeather1 = 3;
-int pinFeather2 = 4;
-int pinFeather3 = 5;
-
-long currentInches;
+// Variable to keep track of the previous number of feathers lit.
 int prevFeathers;
 
+
+// Setup function (executed once)
 void setup() {
-  //Serial Port begin
+  
+  // Serial port initialization (for debugging)
   Serial.begin (9600);
-  //Define inputs and outputs
+  
+  // Initialize proximity sensor pins
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  
-  //pinMode(onboardLEDPin, OUTPUT);
-  //pinMode(offboardLEDPin, OUTPUT);
 
+  // Initialize feather pins
   pinMode(pinFeather0, OUTPUT);
   pinMode(pinFeather1, OUTPUT);
   pinMode(pinFeather2, OUTPUT);
   pinMode(pinFeather3, OUTPUT);
 
-  //digitalWrite(onboardLEDPin, LOW);
-  //digitalWrite(offboardLEDPin, LOW);
   digitalWrite(pinFeather0, LOW);
   digitalWrite(pinFeather1, LOW);
   digitalWrite(pinFeather2, LOW);
   digitalWrite(pinFeather3, LOW);
 
-  // initialize variables
-  currentInches = 0;
+  // Initialize other variables
   prevFeathers = 0;
 }
 
 
-
+// Function takes the distance in inches
+// and returns the number of feathers to be lit
 int inchesToFeathers(long i) {
 
   if(i > 40) {
@@ -65,6 +61,9 @@ int inchesToFeathers(long i) {
 }
 
 
+
+// Function takes the number of feathers desired to be lit,
+// and lights the feather LEDs.
 void setFeathers(int i) {
 
   int n = i;
@@ -78,8 +77,6 @@ void setFeathers(int i) {
   } else {
     // keep n as-is
   }
-
-
 
   switch(n) {
     case 0:
@@ -129,9 +126,9 @@ void setFeathers(int i) {
 
 
 
-
-void loop()
-{
+// Loop function (executed iteratively)
+void loop() {
+  
   // The sensor is triggered by a HIGH pulse of 10 or more microseconds.
   // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
   digitalWrite(trigPin, LOW);
@@ -146,21 +143,29 @@ void loop()
   pinMode(echoPin, INPUT);
   long duration = pulseIn(echoPin, HIGH);
  
-  // convert the time into a distance (in inches)
-  currentInches = (duration / 2) / 74;
+  // Convert the time into a distance (in inches)
+  long currentInches = (duration / 2) / 74;
 
-  //Serial.print("current=");
-  //Serial.print(currentInches);
-  //Serial.print(", prevF=");
-  //Serial.print(prevFeathers);
-  //Serial.println();
+  // Display some debugging messages on the serial console
+  Serial.print("currentInches=");
+  Serial.print(currentInches);
+  Serial.print(", prevFeathers=");
+  Serial.print(prevFeathers);
+  Serial.println();
 
+  
   if(inchesToFeathers(currentInches) > prevFeathers) {
+    // If, based on the current distance value, the number of feathers
+    // that we need to light up is larger than the number of feathers
+    // we previously lit up, then add another feather.
     int numFeathers = prevFeathers + 1;
     setFeathers(numFeathers);
     prevFeathers = numFeathers;
     
   } else if(inchesToFeathers(currentInches) < prevFeathers) {
+    // If, based on the current distance value, the number of feathers
+    // that we need to light up is fewer than the number of feathers
+    // we previously lit up, then subtract a feather.
     int numFeathers = prevFeathers - 1;
     setFeathers(numFeathers);
     prevFeathers = numFeathers;
@@ -169,6 +174,6 @@ void loop()
     // Do nothing.  Keep the number of feathers the same.
   }
 
-  
+  // The loop is executed approximately 4 times per second.
   delay(250);
 }
