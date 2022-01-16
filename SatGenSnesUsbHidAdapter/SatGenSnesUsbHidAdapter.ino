@@ -319,20 +319,20 @@ The button mapping is as follows:
 
 USB HID     SNES     Saturn    Genesis
 ----------------------------------------------------------------------
--x          Left     Left      Left  (Y when A+B+C pressed)
-+x          Right    Right     Right (A when A+B+C pressed)
--y          Down     Down      Down  (B when A+B+C pressed)
-+y          Up       Up        Up    (X when A+B+C pressed)
+-x          Left     Left      Left  (Y when A+B+C pressed for either Saturn or Genesis)
++x          Right    Right     Right (A when A+B+C pressed for either Saturn or Genesis)
+-y          Down     Down      Down  (B when A+B+C pressed for either Saturn or Genesis)
++y          Up       Up        Up    (X when A+B+C pressed for either Saturn or Genesis)
 Button 0    B        B         B
 Button 1    Y        A         A
-Button 2    Select   L         A+B+C (disables directions and A,B,C)
+Button 2    Select   A+B+C     A+B+C (disables directions and A,B,C)
 Button 3    Start    Start     Start
 Button 4    A        C         C
 Button 5    X        Y         
 Button 6    L        X         
 Button 7    R        Z         
 Button 8
-Button 9
+Button 9             L
 Button 10            R
 Button 11
 Button 12
@@ -403,7 +403,7 @@ uint16_t satControllerRegister = 0x0000; // 16 bit number to hold the 9 button v
 #define SAT_X_BUTTON_MASK     0x0040
 #define SAT_Y_BUTTON_MASK     0x0020
 #define SAT_Z_BUTTON_MASK     0x0080
-#define SAT_L_BUTTON_MASK     0x0004
+#define SAT_L_BUTTON_MASK     0x0200
 #define SAT_R_BUTTON_MASK     0x0400
 #define SAT_START_BUTTON_MASK 0x0008
 #define SAT_UP_BUTTON_MASK    0x1000
@@ -416,8 +416,9 @@ uint16_t satControllerRegister = 0x0000; // 16 bit number to hold the 9 button v
 After SNES shift
 R L X A St Se Y B
 
-Corresponding Sat (updated 8/21/16)
-Z X Y C St L  A B
+Corresponding Sat (updated 2022/01/16)
+Select is a placeholder, it is derived from the values of A+B+C, not an actual button
+Z X Y C St _ A B
 */
 
 
@@ -642,9 +643,53 @@ void loop() {
   // Buttons
   uint8_t snesButtons = (uint8_t)(snesControllerRegister & 0x000F) | (uint8_t)((snesControllerRegister & 0x0F00) >> 4);  // SNES buttons
   usbGameControllerRegisterLOW = snesButtons;
+
+  // Special button combinations for the Saturn controller
+  // The controller has no SELECT button, so SELECT = A+B+C.  Note that we'll block the individual Saturn A, B, and C, buttons while the SELECT combo is pressed.
+  // This allows for SELECT and START to be pressed at the same time.
+  // Also, during the time the SELECT combo is enabled, RIGHT, DOWN, UP, LEFT will map to SNES A, B, X, Y respectively.  To do this, we'll need to disable RIGHT, DOWN, UP, and LEFT
+  
+  if( (satControllerRegister & SAT_A_BUTTON_MASK) && (satControllerRegister & SAT_B_BUTTON_MASK) && (satControllerRegister & SAT_C_BUTTON_MASK) ) {
+    
+    // The SELECT combo was pressed.  Disable A, B, C, RIGHT, DOWN, UP, LEFT, and press SELECT
+    uint8_t tempSatControllerRegister = satControllerRegister; // Used to build the new button states
+    tempSatControllerRegister &= ~(SAT_A_BUTTON_MASK | SAT_B_BUTTON_MASK | SAT_C_BUTTON_MASK | SAT_RIGHT_BUTTON_MASK | SAT_DOWN_BUTTON_MASK | SAT_UP_BUTTON_MASK | SAT_LEFT_BUTTON_MASK);
+    tempSatControllerRegister |= SNES_SELECT_BUTTON_MASK_POST_SHIFT;
+
+    // Also, RIGHT, DOWN, UP, LEFT will map to SNES A, B, X, Y respectively.
+    if(satControllerRegister & SAT_RIGHT_BUTTON_MASK) {
+      tempSatControllerRegister |= SNES_A_BUTTON_MASK_POST_SHIFT;
+      
+    } else {
+      tempSatControllerRegister &= ~(SNES_A_BUTTON_MASK_POST_SHIFT);
+    }
+
+    if(satControllerRegister & SAT_DOWN_BUTTON_MASK) {
+      tempSatControllerRegister |= SNES_B_BUTTON_MASK_POST_SHIFT;
+      
+    } else {
+      tempSatControllerRegister &= ~(SNES_B_BUTTON_MASK_POST_SHIFT);
+    }
+
+    if(satControllerRegister & SAT_UP_BUTTON_MASK) {
+      tempSatControllerRegister |= SNES_X_BUTTON_MASK_POST_SHIFT;
+      
+    } else {
+      tempSatControllerRegister &= ~(SNES_X_BUTTON_MASK_POST_SHIFT);
+    }
+
+    if(satControllerRegister & SAT_LEFT_BUTTON_MASK) {
+      tempSatControllerRegister |= SNES_Y_BUTTON_MASK_POST_SHIFT;
+      
+    } else {
+      tempSatControllerRegister &= ~(SNES_Y_BUTTON_MASK_POST_SHIFT);
+    }
+
+    satControllerRegister = tempSatControllerRegister; // now that we're finished building the new button status, we assign it
+  }
   
   usbGameControllerRegisterLOW |= (uint8_t)(satControllerRegister & 0x00FF);  // we OR in the Saturn controller bits
-  usbGameControllerRegisterHIGH = (uint8_t)( (satControllerRegister & SAT_R_BUTTON_MASK) >> 8 );  // Handle the Saturn controller's 9th button
+  usbGameControllerRegisterHIGH = (uint8_t)( (satControllerRegister & (SAT_R_BUTTON_MASK | SAT_L_BUTTON_MASK)) >> 8 );  // Handle the Saturn controller's L and R buttons
 
   // Special button combinations for the Genesis 3-button controller
   // The controller has no SELECT button, so SELECT = A+B+C.  Note that we'll block the individual Genesis A, B, and C, buttons while the SELECT combo is pressed.
@@ -728,4 +773,3 @@ void loop() {
 
   DigiJoystick.delay(15); // used to be 16. changed to 15 to compensate for extra instructions performed when translating controller registers to USB gamepad buttons/axis
 }
-
