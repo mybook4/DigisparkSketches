@@ -65,8 +65,8 @@ volatile uint8_t buttonByte[2] = {0xFF, 0xFF};
 #define SAT_Lt_MAP PSX_LEFT
 #define SAT_Dn_MAP PSX_DOWN
 #define SAT_Up_MAP PSX_UP
-#define SAT_L_MAP  PSX_SELECT
-
+//#define SAT_L_MAP  PSX_SELECT
+#define SAT_L_MAP PSX_L2
 
 // Genesis pin definitions
 #define GEN_PIN  PIND
@@ -80,8 +80,8 @@ volatile uint8_t buttonByte[2] = {0xFF, 0xFF};
 #define GEN_D4 PD6
 #define GEN_D5 PD7
 
-// mapping between saturn buttons and PSX button bit positions
-#define GEN_MODE_MAP PSX_L2
+// mapping between genesis buttons and PSX button bit positions
+#define GEN_MODE_MAP PSX_SELECT
 #define GEN_X_MAP  PSX_L1
 #define GEN_Y_MAP  PSX_TRIANGLE
 #define GEN_Z_MAP  PSX_R1
@@ -136,16 +136,15 @@ void setup() {
     SPDR = 0xFF;
     
     // set up Saturn controller lines
-    /*
     SAT_DDR = 0x00;  // initially set all saturn lines to input (this will be changed later)
     SAT_PORT = 0x00; // initially turn off all pullup lines
     SAT_DDR |= (1<<SAT_S0) | (1<<SAT_S1); // set S0 and S1 to output (other lines are already inputs)
-    */
+    
 
     // set up Genesis controller lines
-    GEN_DDR = 0x00;  // initially set all saturn lines to input (this will be changed later
-    GEN_PORT = 0x00; // initially turn off all pullup ines
-    GEN_DDR |= (1<<GEN_SEL);
+    //GEN_DDR = 0x00;  // initially set all saturn lines to input (this will be changed later
+    //GEN_PORT = 0x00; // initially turn off all pullup ines
+    //GEN_DDR |= (1<<GEN_SEL);
 
     sei();
 }
@@ -182,9 +181,12 @@ void readSaturnButtonStates() {
   (SAT_PIN & (1<<SAT_D2))? setPSXButton(SAT_A_MAP, false): setPSXButton(SAT_A_MAP, true); // ...
   (SAT_PIN & (1<<SAT_D3))? setPSXButton(SAT_St_MAP, false): setPSXButton(SAT_St_MAP, true); // ...
 
+  // Holding A+B+C simulates pressing the PSX Select button
+  ( ((SAT_PIN & (1<<SAT_D2)) == 0) && ((SAT_PIN & (1<<SAT_D0)) == 0) && ((SAT_PIN & (1<<SAT_D1)) == 0))? setPSXButton(PSX_SELECT, true): setPSXButton(PSX_SELECT, false);
+
   // set S1,S0 to 1,0
-  SAT_PORT |= (1<<SAT_S1);
   SAT_PORT &= ~(1<<SAT_S0);
+  SAT_PORT |= (1<<SAT_S1);
   _delay_us(10);
   (SAT_PIN & (1<<SAT_D0))? setPSXButton(SAT_Up_MAP, false): setPSXButton(SAT_Up_MAP, true); // if Up is 1, then it isn't pressed
   (SAT_PIN & (1<<SAT_D1))? setPSXButton(SAT_Dn_MAP, false): setPSXButton(SAT_Dn_MAP, true); // ...
@@ -325,8 +327,8 @@ void loop() {
   if(performDelayedPoll) {
     
     _delay_ms(15);
-    //readSaturnButtonStates(); // read the Sega Saturn controller button states
-    readGenesisButtonStates(); // read the Sega Genesis controller button states
+    readSaturnButtonStates(); // read the Sega Saturn controller button states
+    //readGenesisButtonStates(); // read the Sega Genesis controller button states
     
     //gpioDebugger.debugPrintMSb(0x41);
     
